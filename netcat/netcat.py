@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # coding=utf-8
-'''
-    简易工具
-    By Justin Seitz
-    Modified By LiT0
-'''
-
 
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -28,6 +22,9 @@ def client_sender(buffer):
     try:
         client.connect((args.target,args.port))
         print('connected')
+
+        if len(buffer):
+            client.send(buffer.encode('ascii'))
 
         while True:
             recv_len = 1
@@ -70,41 +67,42 @@ def server_forver():
         pool.submit(client_hander,client_socket)
 
 def client_hander(client_socket):
-    if args.upload:
-        file_buffer = b''
-        while True:
-            data = client_socket.recv(1024)
-            if not data:
-                break
-            else:
-                file_buffer += data
 
-            try:
-                with open(args.upload,'wb') as f:
-                    f.write(file_buffer)
+        if args.upload:
+            file_buffer = b''
+            while True:
+                data = client_socket.recv(1024)
+                if not data:
+                    break
+                else:
+                    file_buffer += data
 
-                client_socket.send(b"Successfully saved file to {} \r\n".format(args.upload))
-            except:
-                client_socket.send(b"Failed to save file to {}\r\n".format(args.upload))
+                try:
+                    with open(args.upload,'wb') as f:
+                        f.write(file_buffer)
 
-    if args.exe:
-        output = run_command(args.exe)
-        client_socket.send(output)
+                    client_socket.send(b"Successfully saved file to {} \r\n".format(args.upload))
+                except:
+                    client_socket.send(b"Failed to save file to {}\r\n".format(args.upload))
 
-    if args.command:
-        while True:
-            client_socket.send(b"root@ hacker# ")
-            cmd_buffer = b''
-            cmd_buffer += client_socket.recv(1024)
-            cmd_buffer = cmd_buffer.decode('ascii').strip('\n')
-            response = run_command(cmd_buffer)
-            client_socket.send(response)
+        if args.exe:
+            output = run_command()
+            client_socket.send(output)
+
+        if args.command:
+            while True:
+                client_socket.send(b"root@ hacker# ")
+                cmd_buffer = b''
+                cmd_buffer += client_socket.recv(1024)
+                cmd_buffer = cmd_buffer.decode('ascii').strip('\n')
+                response = run_command(cmd_buffer)
+                client_socket.send(response)
 
 def run_command(command):
     try:
         output = subprocess.check_output(command,stderr=subprocess.STDOUT,shell=True)
     except:
-        output = "Failed to execute command.\r\n"
+        output = b"Failed to execute command.\r\n"
 
     return output
 
